@@ -3,6 +3,7 @@ import * as dotenv from "dotenv";
 import * as fs from "fs";
 import * as path from "path";
 import { loadManifest } from "./utils/manifest";
+import { safeGetOwner, safeGetWatchtower } from "./utils/contract-types";
 
 dotenv.config();
 
@@ -68,12 +69,24 @@ async function checkNetworkHealth(checker: HealthChecker) {
     );
     console.log(`   ✅ RPC Connected (Block: ${blockNumber})`);
 
-    // Check network gas prices
+    // Check network gas prices with network-specific thresholds
     const feeData = await ethers.provider.getFeeData();
     const gasPriceGwei = ethers.formatUnits(feeData.gasPrice || 0, "gwei");
     const gasPriceNum = parseFloat(gasPriceGwei);
 
-    if (gasPriceNum > 100) {
+    // Network-specific high gas price thresholds
+    const gasThresholds: { [key: string]: number } = {
+      mainnet: 100,
+      polygon: 50,
+      avalanche: 50,
+      bsc: 10,
+      sepolia: 50,
+      mumbai: 50,
+      fuji: 50,
+    };
+    const highGasThreshold = gasThresholds[network.name] || 100;
+
+    if (gasPriceNum > highGasThreshold) {
       checker.addResult(
         "Network",
         "Gas Price",
@@ -202,7 +215,7 @@ async function checkContractConfigurations(
   console.log("⚙️  Contract Configuration Health");
   console.log("─────────────────────────────────────────\n");
 
-  // Check CASCADE configuration
+  // Check CASCADE configuration (type-safe)
   if (deployments.BLEULION_CASCADE) {
     try {
       const cascade = await ethers.getContractAt(
@@ -210,9 +223,9 @@ async function checkContractConfigurations(
         deployments.BLEULION_CASCADE
       );
 
-      // Try to check owner if the function exists
-      try {
-        const owner = await (cascade as any).owner();
+      // Check owner using type-safe method
+      const owner = await safeGetOwner(cascade);
+      if (owner) {
         checker.addResult(
           "Configuration",
           "CASCADE Owner",
@@ -221,7 +234,7 @@ async function checkContractConfigurations(
           { owner }
         );
         console.log(`   ✅ CASCADE Owner: ${owner}`);
-      } catch {
+      } else {
         checker.addResult(
           "Configuration",
           "CASCADE Owner",
@@ -231,10 +244,10 @@ async function checkContractConfigurations(
         console.log(`   ⚠️  CASCADE Owner: Not verifiable`);
       }
 
-      // Try to check watchtower link
+      // Check watchtower link using type-safe method
       if (deployments.BLEU_WATCHTOWER) {
-        try {
-          const watchtowerAddr = await (cascade as any).watchtower();
+        const watchtowerAddr = await safeGetWatchtower(cascade);
+        if (watchtowerAddr) {
           if (
             watchtowerAddr.toLowerCase() ===
             deployments.BLEU_WATCHTOWER.toLowerCase()
@@ -255,7 +268,7 @@ async function checkContractConfigurations(
             );
             console.log(`   ⚠️  CASCADE ↔ WATCHTOWER: Mismatch`);
           }
-        } catch {
+        } else {
           checker.addResult(
             "Configuration",
             "CASCADE-WATCHTOWER Link",

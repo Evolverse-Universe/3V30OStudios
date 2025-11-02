@@ -2,6 +2,7 @@ import { ethers, network } from "hardhat";
 import * as fs from "fs";
 import * as path from "path";
 import { loadManifest } from "./utils/manifest";
+import { safeGetOwner, safeGetWatchtower } from "./utils/contract-types";
 
 /**
  * Deployment Verification Script
@@ -62,14 +63,10 @@ async function verifyContract(
       const contract = await ethers.getContractAt(name, address);
       result.checks.accessible = true;
 
-      // Try to call a common view function if available
-      if (typeof (contract as any).owner === "function") {
-        try {
-          await (contract as any).owner();
-          result.checks.configured = true;
-        } catch {
-          result.checks.configured = false;
-        }
+      // Try to call a common view function if available (type-safe)
+      const owner = await safeGetOwner(contract);
+      if (owner !== undefined) {
+        result.checks.configured = true;
       }
     } catch (error) {
       result.checks.accessible = false;
@@ -156,7 +153,7 @@ async function main() {
   // ==========================================
   console.log("🔗 Verifying contract dependencies...\n");
 
-  // Check CASCADE -> WATCHTOWER link
+  // Check CASCADE -> WATCHTOWER link (type-safe)
   if (deployments.BLEULION_CASCADE && deployments.BLEU_WATCHTOWER) {
     try {
       const cascade = await ethers.getContractAt(
@@ -164,15 +161,15 @@ async function main() {
         deployments.BLEULION_CASCADE
       );
 
-      // Check if watchtower is set (if the contract has this function)
-      try {
-        const watchtowerAddr = await (cascade as any).watchtower();
+      // Check if watchtower is set using type-safe method
+      const watchtowerAddr = await safeGetWatchtower(cascade);
+      if (watchtowerAddr) {
         if (watchtowerAddr.toLowerCase() === deployments.BLEU_WATCHTOWER.toLowerCase()) {
           console.log("   ✅ CASCADE → WATCHTOWER link verified");
         } else {
           console.log("   ⚠️  CASCADE → WATCHTOWER link mismatch");
         }
-      } catch {
+      } else {
         console.log("   ⚠️  CASCADE → WATCHTOWER link not verifiable (method may not exist)");
       }
     } catch (error) {

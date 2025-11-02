@@ -162,7 +162,17 @@ async function main() {
     console.log(`   Address: ${deployer.address}`);
     console.log(`   Balance: ${balanceEth} ETH`);
 
-    const minBalance = 0.01; // Minimum 0.01 ETH recommended
+    // Network-specific minimum balance recommendations based on typical gas costs
+    const minBalanceByNetwork: { [key: string]: number } = {
+      mainnet: 0.5,
+      polygon: 0.05,
+      avalanche: 0.1,
+      bsc: 0.05,
+      sepolia: 0.01,
+      mumbai: 0.01,
+      fuji: 0.05,
+    };
+    const minBalance = minBalanceByNetwork[network.name] || 0.01;
 
     if (parseFloat(balanceEth) < minBalance) {
       console.log(`   ⚠️  Low balance (< ${minBalance} ETH)`);

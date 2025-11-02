@@ -96,6 +96,7 @@ echo ""
 echo -e "${BLUE}Step 1/6: Checking dependencies...${NC}"
 if [ ! -d "node_modules" ]; then
     echo "Installing dependencies..."
+    # Using --legacy-peer-deps to resolve ethers v5 compatibility with older hardhat plugins
     npm install --legacy-peer-deps
 else
     echo -e "${GREEN}✅ Dependencies already installed${NC}"
