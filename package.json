@@ -12,6 +12,9 @@
     "deploy:cascade": "hardhat run scripts/deploy_cascade.ts",
     "deploy:governance": "hardhat run scripts/deploy_governance.ts",
     "deploy:treasury": "hardhat run scripts/deploy_treasury.ts",
+    "deploy:init": "hardhat run scripts/init_deployment.ts",
+    "deploy:verify": "hardhat run scripts/verify_deployment.ts",
+    "deploy:health": "hardhat run scripts/deployment_health_check.ts",
     "compile": "hardhat compile",
     "test": "hardhat test",
     "clean": "hardhat clean"
